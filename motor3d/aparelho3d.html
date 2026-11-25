@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1080px;height:1920px;overflow:hidden;font-family:"DM Sans",sans-serif;color:#fff;background:#120305}
+canvas{position:absolute;left:0;top:0;width:1080px;height:1920px}
+#vig{position:absolute;inset:0;background:radial-gradient(ellipse 80% 42% at 50% 54%,transparent 38%,rgba(8,2,3,.94) 100%)}
+#topfade{position:absolute;left:0;right:0;top:0;height:700px;background:linear-gradient(#0b0203 0%,rgba(11,2,3,.88) 50%,transparent 100%)}
+#botfade{position:absolute;left:0;right:0;bottom:0;height:520px;background:linear-gradient(transparent,rgba(11,2,3,.9) 60%,#0b0203)}
+.brand{position:absolute;top:110px;left:60px;display:flex;align-items:center;gap:16px;font-size:34px;font-weight:700}
+.brand .av{width:74px;height:74px;border-radius:50%;background:#4fd1c5;display:flex;align-items:center;justify-content:center}
+.bar{position:absolute;top:60px;left:50px;right:50px;display:flex;gap:10px}
+.bar i{flex:1;height:7px;border-radius:4px;background:rgba(255,255,255,.2);overflow:hidden}
+.bar i b{display:block;height:100%;width:0;background:#fff}
+.cap{position:absolute;left:70px;right:70px;top:240px;height:330px;display:flex;align-items:center;justify-content:center;text-align:center;opacity:0}
+.cap div{font-size:82px;font-weight:800;line-height:1.1;letter-spacing:-2px;text-shadow:0 4px 30px rgba(0,0,0,.7)}
+.cap.small div{font-size:70px}
+.cap .k{color:#5fe0d3}
+#mes{position:absolute;bottom:300px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:18px;opacity:0}
+#mes .n{font-size:44px;font-weight:800;letter-spacing:6px}
+#mes .track{width:520px;height:12px;border-radius:6px;background:rgba(255,255,255,.18);overflow:hidden}
+#mes .track b{display:block;height:100%;width:0;background:#5fe0d3}
+.star{position:absolute;width:70px;height:70px;margin:-35px 0 0 -35px;opacity:0}
+#fim{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 90px;opacity:0;background:rgba(8,2,3,.86)}
+#fim .q{font-size:92px;font-weight:800;line-height:1.1;letter-spacing:-2px}
+#fim .q .k{color:#5fe0d3}
+#fim .follow{margin-top:80px;padding:38px 70px;border-radius:999px;background:#4fd1c5;color:#06141c;font-size:52px;font-weight:800}
+#fim .sub{margin-top:36px;font-size:42px;color:rgba(255,255,255,.75)}
+#credit{position:absolute;bottom:80px;left:0;right:0;text-align:center;font-size:24px;color:rgba(255,255,255,.5);letter-spacing:1px}
+</style></head><body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<div id="vig"></div><div id="topfade"></div><div id="botfade"></div><div id="fx"></div>
+<div class="bar" id="bar"></div>
+<div class="brand"><div class="av"><svg width="40" height="44" viewBox="0 0 100 110"><path d="M50 14C40 4 14 2 10 26c-3 18 6 30 10 52 3 18 8 28 14 28 7 0 7-26 16-26s9 26 16 26c6 0 11-10 14-28 4-22 13-34 10-52C86 2 60 4 50 14z" fill="#06141c"/></svg></div>OTH Odontologia</div>
+<div id="caps"></div>
+<div id="mes"><div class="n" id="mesn">MÊS 1</div><div class="track"><b id="mesb"></b></div></div>
+<div id="fim"><div class="q">Você <span class="k">usaria aparelho</span>?</div><div class="follow">Comenta aqui</div><div class="sub">Siga para mais dicas de odontologia</div></div>
+<div id="credit">Animação 3D ilustrativa · Modelo: University of Dundee (CC BY 4.0)</div>
+<script src="dental3d.js"></script>
+<script>
+const CAPS = [
+  [0.2, 3.4, 'Dentes <span class="k">tortos</span> têm solução.'],
+  [3.4, 6.6, 'O aparelho faz uma <span class="k">força leve</span> e constante.', 'small'],
+  [6.6, 10.2, 'O osso se <span class="k">remodela</span> e o dente se move.', 'small'],
+  [10.2, 13.8, 'Pouco a pouco, <span class="k">mês a mês</span>.', 'small'],
+  [13.8, 17.2, 'No final, a <span class="k">contenção</span> mantém o resultado.', 'small'],
+  [17.2, 20.6, 'Dentes alinhados são mais <span class="k">fáceis de limpar</span>.', 'small'],
+];
+const MOVE = [6.6, 13.8], BR_ON = [3.6, 5.3], WIRE_IN = [5.3, 6.4], WIRE_OUT = [14.0, 14.5], BR_OFF = [14.5, 15.6], FIM = 20.6; window.DUR = 24.6;
+document.getElementById('caps').innerHTML = CAPS.map(c => `<div class="cap ${c[3]||''}"><div>${c[2]}</div></div>`).join('');
+const caps = [...document.querySelectorAll('.cap')], segs = [...CAPS.map(c => [c[0], c[1]]), [FIM, DUR]];
+document.getElementById('bar').innerHTML = '<i><b></b></i>'.repeat(segs.length);
+const fills = [...document.querySelectorAll('.bar b')];
+const clamp = x => Math.max(0, Math.min(1, x)), ease = x => 1 - Math.pow(1 - x, 3), eio = x => x < .5 ? 4*x*x*x : 1 - Math.pow(-2*x + 2, 3)/2;
+const back = x => { const c = 2.2; return 1 + (c+1)*Math.pow(x-1,3) + c*Math.pow(x-1,2); };
+const starSVG = '<svg viewBox="-50 -50 100 100"><path d="M0-48L8-8 48 0 8 8 0 48-8 8-48 0-8-8Z" fill="#fff"/><circle r="10" fill="#fff" opacity=".8"/></svg>';
+const stars = Array.from({ length: 6 }, () => { const s = document.createElement('div'); s.className = 'star'; s.innerHTML = starSVG; document.getElementById('fx').appendChild(s); return s; });
+
+// ---------- matemática
+const norm = a => { const l = Math.hypot(...a); return a.map(v => v / l); }, cross = (a, b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+const add = (a, b, k = 1) => a.map((v, i) => v + b[i]*k);
+const T = v => [1,0,0,0, 0,1,0,0, 0,0,1,0, v[0],v[1],v[2],1];
+const Sc = s => [s,0,0,0, 0,s,0,0, 0,0,s,0, 0,0,0,1];
+function rotAxis(a, g) { const [x, y, z] = norm(a), c = Math.cos(g), s = Math.sin(g), C = 1 - c;
+  return [c + x*x*C, y*x*C + z*s, z*x*C - y*s, 0, x*y*C - z*s, c + y*y*C, z*y*C + x*s, 0, x*z*C + y*s, y*z*C - x*s, c + z*z*C, 0, 0,0,0,1]; }
+const ZC = .9;
+
+// ---------- geometria
+function box(c, ax, hs) { // ax = [t, u, n] eixos; hs = meias medidas
+  const pos = [], nor = [], idx = [];
+  const faces = [[2, 1], [2, -1], [0, 1], [0, -1], [1, 1], [1, -1]];
+  for (const [k, sg] of faces) { const n = ax[k].map(v => v * sg); const o = [0,1,2].filter(i => i !== k); const b = pos.length / 3;
+    for (const [a, bb] of [[-1,-1],[1,-1],[1,1],[-1,1]]) { let p = add(c, ax[k], sg * hs[k]); p = add(p, ax[o[0]], a * hs[o[0]]); p = add(p, ax[o[1]], bb * hs[o[1]]); pos.push(...p); nor.push(...n); }
+    const d = cross(ax[o[0]], ax[o[1]]).reduce((s, v, i) => s + v * n[i], 0) > 0; d ? idx.push(b, b+1, b+2, b, b+2, b+3) : idx.push(b, b+2, b+1, b, b+3, b+2); }
+  return { pos, nor, idx };
+}
+function merge(list) { const pos = [], nor = [], idx = []; for (const m of list) { const b = pos.length / 3; pos.push(...m.pos); nor.push(...m.nor); idx.push(...m.idx.map(i => i + b)); } return { pos: new Float32Array(pos), nor: new Float32Array(nor), idx: new Uint32Array(idx) }; }
+function tube(pts, r, frac) {
+  const cr = (p0, p1, p2, p3, u) => p1.map((v, i) => .5 * (2*v + (-p0[i] + p2[i])*u + (2*p0[i] - 5*v + 4*p2[i] - p3[i])*u*u + (-p0[i] + 3*v - 3*p2[i] + p3[i])*u*u*u));
+  const P = [add(pts[0], pts[0].map((v, i) => v - pts[1][i]), .6), ...pts, add(pts[pts.length-1], pts[pts.length-1].map((v, i) => v - pts[pts.length-2][i]), .6)];
+  const C = []; for (let i = 0; i < P.length - 1; i++) { const p0 = P[Math.max(0, i-1)], p3 = P[Math.min(P.length-1, i+2)]; for (let k = 0; k < 16; k++) C.push(cr(p0, P[i], P[i+1], p3, k/16)); } C.push(P[P.length-1]);
+  const n = Math.max(2, Math.floor(C.length * frac)); const SIDES = 10, pos = [], nor = [], idx = [];
+  for (let i = 0; i < n; i++) { const a = C[Math.max(0, i-1)], b = C[Math.min(C.length-1, i+1)]; const tg = norm(b.map((v, k) => v - a[k])); const u1 = norm(cross(tg, [0,1,0])), u2 = cross(u1, tg);
+    for (let s = 0; s < SIDES; s++) { const g = s / SIDES * Math.PI * 2; const d = add(u1.map(v => v * Math.cos(g)), u2, Math.sin(g)); pos.push(...add(C[i], d, r)); nor.push(...d); } }
+  for (let i = 0; i < n - 1; i++) for (let s = 0; s < SIDES; s++) { const a = i*SIDES + s, b = i*SIDES + (s+1) % SIDES; idx.push(a, a + SIDES, b, b, a + SIDES, b + SIDES); }
+  return { pos: new Float32Array(pos), nor: new Float32Array(nor), idx: new Uint32Array(idx) };
+}
+
+// ---------- desalinhamento por dente (ordem a partir da linha média)
+// [rotação no próprio eixo, inclinação vestibular(+)/lingual(-), inclinação lateral, deslocamento vertical]
+const MIS = { U: [[.35, .1, .16, .0], [-.5, -.2, -.2, -.03], [.3, .3, .22, .05], [.2, 0, .1, 0], [-.12, .03, 0, 0]],
+              U2: [[-.2, .16, -.14, .02], [.45, -.18, .2, -.02], [-.35, .26, -.24, .05], [-.22, 0, -.1, 0], [.14, -.02, 0, 0]],
+              L: [[.6, .1, .2, .02], [-.4, -.2, -.18, -.02], [.35, .18, .16, .03], [.16, 0, .06, 0], [0, 0, 0, 0]],
+              L2: [[-.5, -.16, -.22, -.02], [.45, .14, .2, .02], [-.28, .16, -.18, .03], [-.18, 0, -.06, 0], [0, 0, 0, 0]] };
+let TEETH = [], BRK = [], WIRES = [], LIGS = [];
+const X = (p, k) => { if (!p.mis || k <= 0) return M4.id(); const [rv, tip, md, dy] = p.mis.map(v => v * k); const Pv = [p.center[0], p.cejY, p.center[2]];
+  const rad = norm([p.center[0], 0, p.center[2] - ZC]), tg = cross([0,1,0], rad);
+  return M4.mul(T([0, (p.lower ? 1 : -1) * dy, 0]), M4.mul(T(Pv), M4.mul(rotAxis([0,1,0], rv), M4.mul(rotAxis(tg, tip), M4.mul(rotAxis(rad, md), T(Pv.map(v => -v))))))); };
+
+window.EVENTS = () => {
+  const ev = [{ t: .1, k: 'hook' }]; CAPS.slice(1).forEach(c => ev.push({ t: c[0], k: 'whoosh' }));
+  BRK.forEach(b => ev.push({ t: b.tOn + .05, k: 'click' })); ev.push({ t: WIRE_IN[0], k: 'wire', d: WIRE_IN[1] - WIRE_IN[0] });
+  ev.push({ t: MOVE[0], k: 'move', d: MOVE[1] - MOVE[0] }); ev.push({ t: WIRE_OUT[0], k: 'wire', d: WIRE_OUT[1] - WIRE_OUT[0] });
+  BRK.forEach(b => ev.push({ t: b.tOff + .05, k: 'pop' })); [17.4, 17.8, 18.2].forEach(t => ev.push({ t, k: 'sparkle' })); ev.push({ t: FIM, k: 'fim' });
+  return { dur: DUR, estilo: 'tech', events: ev.sort((a, b) => a.t - b.t) };
+};
+
+window.ready = (async () => {
+  window.S = await initScene(document.getElementById('c'), 'http://local.test/m3d/dentition.glb', { gumU: { crown: .37, depth: 1.3 }, gumL: { crown: .42, depth: 1.3 } });
+  TEETH = S.prims.filter(p => !p.gum && p.cejY !== undefined);
+  for (const lower of [false, true]) {
+    for (const side of [1, -1]) {
+      const list = TEETH.filter(p => p.lower === lower && Math.sign(p.center[0]) === side && p.center[2] > 2.0).sort((a, b) => Math.abs(a.center[0]) - Math.abs(b.center[0]));
+      list.forEach((p, i) => { p.mis = (lower ? (side > 0 ? MIS.L : MIS.L2) : (side > 0 ? MIS.U : MIS.U2))[i] || [0,0,0]; p.bracket = true; });
+    }
+  }
+  // braquetes na face vestibular, no meio da coroa
+  const order = TEETH.filter(p => p.bracket).sort((a, b) => (a.lower - b.lower) || (a.center[0] - b.center[0]));
+  order.forEach((p, i) => {
+    const dir = p.lower ? 1 : -1, ym = p.cejY + dir * p.crownH * .52; const rad = norm([p.center[0], 0, p.center[2] - ZC]);
+    let best = null, bd = -1e9;
+    for (let k = 0; k < p.pos.length; k += 6) { const w = M4.apply(p.model, [p.pos[k], p.pos[k+1], p.pos[k+2]]); if (Math.abs(w[1] - ym) > .025) continue; const d = (w[0] - p.center[0]) * rad[0] + (w[2] - p.center[2]) * rad[2]; if (d > bd) { bd = d; best = w; } }
+    const n = rad, u = [0,1,0], tg = norm(cross(u, n));
+    const pad = box(add(best, n, .004), [tg, u, n], [.052, .046, .006]);
+    const body = box(add(best, n, .022), [tg, u, n], [.036, .03, .016]);
+    const wingT = box(add(add(best, n, .03), u, .028), [tg, u, n], [.044, .008, .012]);
+    const wingB = box(add(add(best, n, .03), u, -.028), [tg, u, n], [.044, .008, .012]);
+    const torus = (() => { const pos = [], nor = [], idx = []; const A = 28, B = 10, R = .034, rr = .0085, c0 = add(best, n, .03);
+      for (let i = 0; i <= A; i++) { const a = i / A * Math.PI * 2; const ca = [0,1,2].map(q => tg[q] * Math.cos(a) * 1.15 + u[q] * Math.sin(a) * .95);
+        for (let j = 0; j <= B; j++) { const b2 = j / B * Math.PI * 2; const nn = [0,1,2].map(q => norm(ca)[q] * Math.cos(b2) + n[q] * Math.sin(b2)); pos.push(...[0,1,2].map(q => c0[q] + ca[q] * R + nn[q] * rr)); nor.push(...nn); } }
+      for (let i = 0; i < A; i++) for (let j = 0; j < B; j++) { const a = i*(B+1) + j, b2 = a + B + 1; idx.push(a, b2, a+1, b2, b2+1, a+1); } return { pos, nor, idx }; })();
+    const lig = merge([torus]);
+    const m = merge([pad, body, wingT, wingB]);
+    const b = S.add({ name: 'BRK', gum: 4, pos: m.pos, nor: m.nor, idx: m.idx, parent: p, c: add(best, n, .02), slot: add(best, n, .034), lower: p.lower });
+    b.tOn = BR_ON[0] + (BR_ON[1] - BR_ON[0] - .3) * (i / (order.length - 1)); b.tOff = BR_OFF[0] + (BR_OFF[1] - BR_OFF[0] - .3) * (i / (order.length - 1));
+    BRK.push(b);
+    const L = S.add({ name: 'BRK', gum: 5, color: [.12, .62, .72], pos: lig.pos, nor: lig.nor, idx: lig.idx, parent: p, c: b.c, slot: b.slot, lower: p.lower, isLig: true });
+    L.tOn = b.tOn + .12; L.tOff = b.tOff - .05; LIGS.push(L);
+  });
+  WIRES = [false, true].map(lower => S.add({ name: 'WIRE', gum: 4, pos: new Float32Array(3), nor: new Float32Array(3), idx: new Uint32Array(0), lower }));
+  return true;
+})();
+
+function camAt(t) {
+  const yaw = -.28 + .1 * Math.sin(t * .25) + (t > 16.5 ? .55 * eio(clamp((t - 16.5) / 4)) : 0) * (t < FIM ? 1 : 1);
+  const dist = 6.6 - .7 * eio(clamp((t - 6.2) / 2)) + .9 * eio(clamp((t - 13.6) / 2.5));
+  const tg = [0, 1.13, 2.4];
+  return { eye: [tg[0] + Math.sin(yaw) * dist, tg[1] + .15, tg[2] + Math.cos(yaw) * dist], target: tg, fov: .42 };
+}
+
+window.setT = t => {
+  const k = 1 - eio(clamp((t - MOVE[0]) / (MOVE[1] - MOVE[0])));
+  const cam = camAt(t);
+  const bs = b => t < b.tOn ? 0 : (t < b.tOff ? back(clamp((t - b.tOn) / .35)) : 1 - ease(clamp((t - b.tOff) / .3)));
+  // fio passando pelos braquetes
+  const wf = t < WIRE_IN[0] ? 0 : (t < WIRE_OUT[0] ? ease(clamp((t - WIRE_IN[0]) / (WIRE_IN[1] - WIRE_IN[0]))) : 1 - ease(clamp((t - WIRE_OUT[0]) / (WIRE_OUT[1] - WIRE_OUT[0]))));
+  WIRES.forEach(w => { const pts = BRK.filter(b => b.lower === w.lower).sort((a, b) => a.c[0] - b.c[0]).map(b => M4.apply(X(b.parent, k), b.slot));
+    if (wf < .02) { w.hidden = true; return; } w.hidden = false; const g = tube(pts, .0075, wf); w.pos = g.pos; w.nor = g.nor; w.idx = g.idx; S.update(w); });
+  S.draw(cam, { L1: [.25, .45, .9], expo: .72, xform: p => {
+    if (p.name === 'BRK') { const s = bs(p); if (s <= .001) return Sc(0); return M4.mul(X(p.parent, k), M4.mul(T(p.c), M4.mul(Sc(s), T(p.c.map(v => -v))))); }
+    if (p.gum) return M4.id(); return X(p, k); } });
+  // contador de meses
+  const mes = document.getElementById('mes'); const mo = t > MOVE[0] - .2 && t < MOVE[1] + 1.2;
+  mes.style.opacity = mo ? clamp((t - MOVE[0] + .2) / .3) * clamp((MOVE[1] + 1.2 - t) / .4) : 0;
+  const pr = clamp((t - MOVE[0]) / (MOVE[1] - MOVE[0])); document.getElementById('mesn').textContent = 'MÊS ' + Math.max(1, Math.round(1 + pr * 17)); document.getElementById('mesb').style.width = pr * 100 + '%';
+  // brilhos
+  const pts = [[.12, 1.25, 2.86], [-.2, 1.24, 2.84], [.36, 1.28, 2.74], [-.42, 1.27, 2.7], [.05, 1.0, 2.75], [-.25, .98, 2.72]];
+  stars.forEach((s, i) => { const lt = t - (17.4 + i * .4); const kk = lt < 0 ? 0 : Math.sin(clamp(lt / 1) * Math.PI); const q = S.project(cam, pts[i]);
+    s.style.left = q[0] + 'px'; s.style.top = q[1] + 'px'; s.style.opacity = t > FIM ? 0 : kk; s.style.transform = `rotate(${lt * 80}deg) scale(${.4 + .8 * kk})`; });
+  CAPS.forEach((c, i) => { const lt = t - c[0], d = c[1] - c[0]; caps[i].style.opacity = (lt < 0 || lt > d) ? 0 : clamp(lt / .3) * clamp((d - lt) / .25); caps[i].style.transform = `translateY(${(1 - ease(clamp(lt / .4))) * 40}px)`; });
+  segs.forEach((s, i) => fills[i].style.width = clamp((t - s[0]) / (s[1] - s[0])) * 100 + '%');
+  const f = clamp((t - FIM) / .5), fim = document.getElementById('fim'); fim.style.opacity = f; fim.querySelector('.q').style.transform = `translateY(${(1 - ease(f)) * 50}px)`;
+  const fo = fim.querySelector('.follow'); fo.style.transform = `scale(${t < FIM + 1.2 ? .4 + .6 * back(clamp((t - FIM - .6) / .5)) : 1 + .05 * Math.sin((t - FIM - 1.2) * 5)})`; fo.style.opacity = clamp((t - FIM - .6) * 4);
+  document.body.style.opacity = clamp(t / .3);
+};
+</script>
+</body></html>
