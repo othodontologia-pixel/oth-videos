@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1080px;height:1920px;overflow:hidden;font-family:"DM Sans",sans-serif;color:#fff;background:#06141c}
+#bg{position:absolute;inset:-100px;background:radial-gradient(circle at 30% 20%,var(--c2) 0%,#0a2230 50%,#050f15 100%)}
+#glow{position:absolute;width:1400px;height:1400px;left:-160px;top:260px;border-radius:50%;background:radial-gradient(circle,var(--c3),transparent 62%)}
+#dots i{position:absolute;border-radius:50%;background:#fff}
+.bar{position:absolute;top:70px;left:50px;right:50px;display:flex;gap:10px}
+.bar i{flex:1;height:7px;border-radius:4px;background:rgba(255,255,255,.2);overflow:hidden}
+.bar i b{display:block;height:100%;width:0;background:#fff}
+.brand{position:absolute;top:120px;left:60px;display:flex;align-items:center;gap:16px;font-size:34px;font-weight:700}
+.brand .av{width:74px;height:74px;border-radius:50%;background:var(--c);display:flex;align-items:center;justify-content:center}
+.chip{position:absolute;top:250px;left:0;right:0;display:flex;justify-content:center}
+.chip span{font-size:32px;font-weight:700;letter-spacing:5px;text-transform:uppercase;color:var(--c);border:3px solid var(--c);padding:14px 34px;border-radius:999px;background:rgba(0,0,0,.25)}
+.slide{position:absolute;left:90px;right:90px;top:420px;bottom:330px;display:flex;flex-direction:column;justify-content:center;opacity:0}
+.big{position:absolute;right:-30px;bottom:-60px;font-size:520px;font-weight:800;color:rgba(255,255,255,.05);line-height:1}
+.txt{font-weight:800;letter-spacing:-2px;line-height:1.08;position:relative}
+.hook .txt{font-size:118px}
+.beat .txt{font-size:86px;font-weight:700;letter-spacing:-1px;line-height:1.15}
+.w{display:inline-block;opacity:0;margin-right:.24em;will-change:transform}
+.w.k{color:var(--c)}
+.fim{align-items:center;text-align:center}
+.fim .q{font-size:92px;font-weight:800;line-height:1.1;letter-spacing:-2px}
+.fim .tooth{margin-bottom:70px}
+.fim .follow{margin-top:80px;padding:38px 70px;border-radius:999px;background:var(--c);color:#06141c;font-size:52px;font-weight:800}
+.fim .sub{margin-top:36px;font-size:42px;color:rgba(255,255,255,.75)}
+.under{height:12px;background:var(--c);border-radius:6px;margin-top:50px;width:0}
+</style></head><body>
+<div id="bg"></div><div id="glow"></div><div id="dots"></div>
+<div class="bar" id="bar"></div>
+<div class="brand"><div class="av"><svg width="40" height="44" viewBox="0 0 100 110"><path d="M50 14C40 4 14 2 10 26c-3 18 6 30 10 52 3 18 8 28 14 28 7 0 7-26 16-26s9 26 16 26c6 0 11-10 14-28 4-22 13-34 10-52C86 2 60 4 50 14z" fill="#06141c"/></svg></div>OTH Odontologia</div>
+<div class="chip"><span id="area"></span></div>
+<div id="slides"></div>
+<script src="videos.js"></script>
+<script>
+const v = VIDEOS.find(x => x.id === (new URLSearchParams(location.search).get('v') || 'd1'));
+const hex = h => [1,3,5].map(i => parseInt(h.slice(i,i+2),16));
+const [r,g,b] = hex(v.cor);
+document.body.style.setProperty('--c', v.cor);
+document.body.style.setProperty('--c2', `rgba(${r},${g},${b},.28)`);
+document.body.style.setProperty('--c3', `rgba(${r},${g},${b},.16)`);
+document.getElementById('area').textContent = v.area;
+
+const marks = s => { let on = false; return s.split(' ').map(w => { const st = w.startsWith('*'); if (st) on = true; const k = on; if (w.replace(/[.,?!:]+$/,'').endsWith('*')) on = false; return { w:w.replace(/\*/g,''), k, st }; }); };
+const words = s => marks(s).map(m => `<span class="w${m.k?' k':''}">${m.w}</span>`).join('');
+const count = s => s.split(' ').length;
+// linha do tempo
+const T = [{ type:'hook', text:v.hook, dur:3.4 }];
+v.beats.forEach((s,i) => T.push({ type:'beat', text:s, n:i+1, dur:Math.min(5.2, Math.max(3.2, 1.5 + .27*count(s))) }));
+T.push({ type:'fim', text:v.fim, dur:4.2 });
+let acc = 0; T.forEach(s => { s.start = acc; acc += s.dur; }); window.DUR = acc;
+
+const tooth = '<svg class="tooth" width="200" height="220" viewBox="0 0 100 110"><path d="M50 14C40 4 14 2 10 26c-3 18 6 30 10 52 3 18 8 28 14 28 7 0 7-26 16-26s9 26 16 26c6 0 11-10 14-28 4-22 13-34 10-52C86 2 60 4 50 14z" fill="#fff" stroke="'+v.cor+'" stroke-width="4"/></svg>';
+document.getElementById('slides').innerHTML = T.map(s => {
+  if (s.type === 'fim') return `<section class="slide fim">${tooth}<div class="q">${words(s.text)}</div><div class="follow">Siga para mais</div><div class="sub">Curiosidades da odontologia</div></section>`;
+  return `<section class="slide ${s.type}">${s.type==='beat'?`<div class="big">${s.n}</div>`:''}<div class="txt">${words(s.text)}</div>${s.type==='hook'?'<div class="under"></div>':''}</section>`;
+}).join('');
+document.getElementById('bar').innerHTML = '<i><b></b></i>'.repeat(T.length);
+
+// partículas determinísticas
+let seed = v.id.charCodeAt(1) * 99; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const P = Array.from({length:26}, () => ({ x:rnd()*1080, y:rnd()*1920, s:4+rnd()*10, sp:20+rnd()*50, o:.05+rnd()*.15 }));
+document.getElementById('dots').innerHTML = P.map(() => '<i></i>').join('');
+const dots = [...document.querySelectorAll('#dots i')];
+
+const slides = [...document.querySelectorAll('.slide')], fills = [...document.querySelectorAll('.bar b')];
+const clamp = x => Math.max(0, Math.min(1, x)), ease = x => 1 - Math.pow(1 - x, 3);
+const back = x => { const c = 2.2; return 1 + (c+1)*Math.pow(x-1,3) + c*Math.pow(x-1,2); };
+const STAG = .085;
+
+// eventos para o áudio
+window.EVENTS = () => {
+  const ev = [];
+  T.forEach((s, i) => {
+    ev.push({ t:s.start, k:i === T.length-1 ? 'fim' : (i === 0 ? 'hook' : 'whoosh') });
+    marks(s.text).forEach((m, j) => { if (m.st) ev.push({ t:s.start + .25 + j*STAG, k:'pop' }); });
+  });
+  return { dur:DUR, estilo:v.estilo, events:ev };
+};
+
+window.setT = t => {
+  T.forEach((s, i) => {
+    const el = slides[i], lt = t - s.start;
+    const fin = clamp(lt / .25), fout = i === T.length-1 ? 1 : clamp((s.dur - lt) / .25);
+    el.style.opacity = (lt < -0.001 || lt > s.dur) ? 0 : fin * fout;
+    el.style.transform = `scale(${1 + .035*clamp(lt/s.dur)}) translateY(${(1-ease(fin))*40}px)`;
+    el.querySelectorAll('.w').forEach((w, j) => {
+      const k = clamp((lt - .25 - j*STAG) / .4);
+      w.style.opacity = clamp(k*1.6);
+      if (w.classList.contains('k')) w.style.transform = `scale(${.5 + .5*back(k)})`;
+      else w.style.transform = `translateY(${(1-ease(k))*45}px)`;
+    });
+    const u = el.querySelector('.under'); if (u) u.style.width = ease(clamp((lt - 1.2)/.6)) * 300 + 'px';
+    const tt = el.querySelector('.tooth'); if (tt) tt.style.transform = `scale(${.4 + .6*back(clamp((lt-.05)/.5))}) rotate(${Math.sin(lt*2)*4}deg)`;
+    const fo = el.querySelector('.follow'); if (fo) fo.style.transform = `scale(${lt < 1.3 ? .4 + .6*back(clamp((lt-.9)/.5)) : 1 + .05*Math.sin((lt-1.3)*5)})`, fo.style.opacity = clamp((lt-.9)*4);
+    const sb = el.querySelector('.sub'); if (sb) sb.style.opacity = clamp((lt-1.3)*3);
+    const bg = el.querySelector('.big'); if (bg) bg.style.transform = `translateY(${(1-ease(clamp(lt/.8)))*120}px)`;
+    fills[i].style.width = clamp(lt / s.dur) * 100 + '%';
+  });
+  P.forEach((p, i) => { const y = ((p.y - t*p.sp) % 1920 + 1920) % 1920; dots[i].style.cssText = `left:${p.x}px;top:${y}px;width:${p.s}px;height:${p.s}px;opacity:${p.o}`; });
+  document.getElementById('glow').style.transform = `translate(${Math.sin(t/3)*180}px,${Math.cos(t/4)*140}px)`;
+  document.body.style.opacity = clamp(t / .3);
+};
+</script>
+</body></html>
