@@ -1,6 +1,6 @@
 # Temas já publicados (não repetir)
 
-## Semana 48 (26/11 a 02/12/2026), Instagram, 19h
+## Semana 48 (26/11 a 02/12/2026), Instagram, 12h (escolha do Júnior; ajustar pelas métricas)
 - Ortodontia: quem pode usar aparelho
 - Implantes: implante descoberto por acidente (Brånemark)
 - Curiosidade: esmalte é a parte mais dura do corpo
